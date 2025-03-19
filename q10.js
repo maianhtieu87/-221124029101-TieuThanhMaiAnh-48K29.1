@@ -5,11 +5,11 @@ const margin = { top: 40, right: 40, bottom: 40, left: 50 },
 const tooltip = d3.select("#q10-tooltip");
 
 d3.csv("data/data.csv").then(rawData => {
-    const parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
+    const parseDate = d3.timeParse("%d/%m/%Y %H:%M");
 
     rawData.forEach(d => {
         d["Thời gian tạo đơn"] = parseDate(d["Thời gian tạo đơn"]);
-        d["Tháng"] = d["Thời gian tạo đơn"].getMonth() + 1;
+        d["Tháng"] = d3.timeFormat("%m")(d["Thời gian tạo đơn"]); // Chuyển đổi thành tháng định dạng 2 chữ số
         d["Mã đơn hàng"] = d["Mã đơn hàng"].trim();
         d["Nhóm gộp"] = `[${d["Mã nhóm hàng"]}] ${d["Tên nhóm hàng"]}`;
         d["Mặt hàng gộp"] = `[${d["Mã mặt hàng"]}] ${d["Tên mặt hàng"]}`;
@@ -70,9 +70,10 @@ d3.csv("data/data.csv").then(rawData => {
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        const x = d3.scaleLinear()
-            .domain([1, 12])
-            .range([0, width]);
+        const x = d3.scaleBand()
+            .domain(data.map(d => d.month))
+            .range([0, width])
+            .padding(0.1);
 
         const minY = d3.min(groupData, d => d.probability);
         const maxY = d3.max(groupData, d => d.probability);
@@ -85,12 +86,12 @@ d3.csv("data/data.csv").then(rawData => {
         const itemsGroup = d3.groups(groupData, d => d.item);
 
         const line = d3.line()
-            .x(d => x(d.month))
+            .x(d => x(d.month) + x.bandwidth() / 2)
             .y(d => y(d.probability));
 
         svg.append("g")
             .attr("transform", `translate(0, ${height})`)
-            .call(d3.axisBottom(x).ticks(12).tickFormat(d => `T${String(d).padStart(2, '0')}`));
+            .call(d3.axisBottom(x).tickFormat(d => `T${d}`));
 
         svg.append("g")
             .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%")));
@@ -107,7 +108,7 @@ d3.csv("data/data.csv").then(rawData => {
                 .data(itemData)
                 .enter()
                 .append("circle")
-                .attr("cx", d => x(d.month))
+                .attr("cx", d => x(d.month) + x.bandwidth() / 2)
                 .attr("cy", d => y(d.probability))
                 .attr("r", 4)
                 .attr("fill", color(itemName))
@@ -115,7 +116,7 @@ d3.csv("data/data.csv").then(rawData => {
                     const itemsInChart = data.filter(item => item.group === d.group && item.month === d.month);
                     itemsInChart.sort((a, b) => a.item.localeCompare(b.item));
 
-                    let tooltipContent = `<strong>T${String(d.month).padStart(2, '0')}</strong><br>`;
+                    let tooltipContent = `<strong>T${d.month}</strong><br>`;
                     itemsInChart.forEach(item => {
                         const itemCode = item.item.match(/\[SET\d+\]/)?.[0] || "";
                         const itemName = item.item.replace(itemCode, "").trim();

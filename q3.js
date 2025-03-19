@@ -1,4 +1,4 @@
-const margin = {top: 20, right: 5, bottom: 50, left: 200},
+const margin = { top: 20, right: 5, bottom: 50, left: 200 },
       width = 1300 - margin.left - margin.right,
       height = 600 - margin.top - margin.bottom;
 
@@ -15,8 +15,15 @@ d3.csv("data/data.csv").then(rawData => {
   rawData.forEach(d => {
     d["Thành tiền"] = +d["Thành tiền"];
     d["SL"] = +d["SL"];
-    const month = d["Thời gian tạo đơn"].split("-")[1];
-    d.Tháng = `Tháng ${month}`;
+
+    // Chuyển đổi định dạng ngày thành đối tượng Date
+    const date = new Date(d["Thời gian tạo đơn"]);
+    if (!isNaN(date)) {
+      d.Tháng = `Tháng ${date.getMonth() + 1}`; // getMonth() trả về 0-11, nên +1 để đúng tháng
+    } else {
+      console.warn("Lỗi định dạng ngày:", d["Thời gian tạo đơn"]);
+      d.Tháng = "Unknown";
+    }
   });
 
   const nestedData = d3.rollup(
@@ -28,7 +35,7 @@ d3.csv("data/data.csv").then(rawData => {
     d => d.Tháng
   );
 
-  const data = Array.from(nestedData, ([Tháng, {doanhThu, soLuong}]) => ({ Tháng, doanhThu, soLuong }));
+  const data = Array.from(nestedData, ([Tháng, { doanhThu, soLuong }]) => ({ Tháng, doanhThu, soLuong }));
   data.sort((a, b) => parseInt(a.Tháng.split(" ")[1]) - parseInt(b.Tháng.split(" ")[1]));
 
   const color = d3.scaleOrdinal(d3.schemeTableau10);
